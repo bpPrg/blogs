@@ -1,0 +1,621 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta name="generator" content="Hugo 0.30.2" />
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <title>Dustin Martin</title>
+    <meta name="description" content="I am a software engineer specializing in large web applications." />
+
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="shortcut icon" href="/images/favicon.ico">
+    <link href="http://www.dustinmartin.net/index.xml" rel="feed" type="application/rss+xml" title="Dustin Martin" />
+    <link rel='stylesheet' type='text/css' href='https://d33wubrfki0l68.cloudfront.net/bundles/9b138d012cdb3df5e368adf9a19ef86b8e920e92.css'/>
+    
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,700,700i|Roboto+Slab:700" rel="stylesheet">
+  </head>
+  <body class="nav-closed">
+    <nav class="navbar navbar-default" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand visible-xs" href="/">Dustin Martin</a>
+        </div>
+
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <a href="/">
+                <span>Home</span>
+              </a>
+            </li>
+            <li>
+              <a href="/about">
+                <span>About</span>
+              </a>
+            </li>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="row">
+        <main class="container">
+          <div class="sidebar hidden-xs col-sm-3">
+            <a class="sidebar-home" href="/">
+              <img class="profile" src="https://d33wubrfki0l68.cloudfront.net/35b8dae3063ba4a1d26f87ba645335ac41a33e3d/eb67e/images/headshot.jpg">
+              <h2>Dustin Martin</h2>
+            </a>
+
+            <p>I am a software engineer specializing in large web applications.</p>
+
+            <p>
+              You can drop me a line via
+              <a target="_blank" href="http://twitter.com/dustinmartin">Twitter</a>,
+              <a target="_blank" href="http://linkedin.com/in/dustinmartin">LinkedIn</a> or
+              <a target="_blank" class="email" href="mailto:dm@dustinmartin.net">email</a> or checkout my code on
+              <a target="_blank" href="http://github.com/dustinmartin">Github</a>.
+              Subscribe
+              <a target="_blank" href="/index.xml">here</a>.
+            </p>
+          </div>
+
+          <div class="content col-sm-9">
+
+
+<ul class="post-list list-unstyled">
+
+  
+
+  
+
+  <li class="post-item">
+
+    <h1 class="post-title">
+  <a href="http://www.dustinmartin.net/mock-services-with-mountebank/">Mock Services with Mountebank</a>
+</h1>
+
+<div class="full-post">
+  
+
+<h2 id="the-problem">The Problem</h2>
+
+<p>In today’s micro service world it is common for a service to rely on many others. To effectively test a service we often need more than just unit tests but also need to test the interactions with dependencies. Unfortunately that can be difficult. It might be easy to standup those service dependencies in a test environment. Or it might be hard to populate with realistic tests data. Or they might be unreliable which could result it flaky tests.</p>
+
+<h2 id="solution">Solution</h2>
+
+<p>To get around the above problems we can mock our service dependencies. My team explored a number solutions but arrived at using a tool called <a href="http://www.mbtest.org/" target="_blank">Mountebank</a> due to it’s level of activity, feature set, simplicity, and our team’s existing comfort with the JavaScript ecosystem.</p>
+
+<p>Mountebank allows our team to create mock services that our app can use instead of the real service. The mock service can be configured to return a predefined response or proxy to the real service and record the response.</p>
+
+<h2 id="imposters-stubs-and-predicates">Imposters, Stubs, and Predicates</h2>
+
+<p>Mountebank centers around Imposters. An Imposter defines how a mock service should work. They are defined in JSON and can be set via a configuration file or through a rest API that is available once Mountebank is started. An Imposter contains one or more Stubs that define how to handle requests to the service mock.</p>
+
+<p>The following Imposter instructs to Mountebank to respond to http requests on port 4547. So far we haven’t defined any Stubs so requests will always get a 501 response (notice the <code>defaultResponse</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-JavaScript" data-lang="JavaScript"><span class="c1">// I&#39;m an imposter and I will fool your app
+</span><span class="c1"></span><span class="p">{</span>
+    <span class="s2">&#34;protocol&#34;</span><span class="o">:</span> <span class="s2">&#34;http&#34;</span><span class="p">,</span>
+    <span class="s2">&#34;port&#34;</span><span class="o">:</span> <span class="mi">4547</span><span class="p">,</span>
+    <span class="s2">&#34;name&#34;</span><span class="o">:</span> <span class="s2">&#34;service-foo&#34;</span><span class="p">,</span>
+    <span class="s2">&#34;defaultResponse&#34;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&#34;statusCode&#34;</span><span class="o">:</span> <span class="mi">501</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;stubs&#34;</span><span class="o">:</span> <span class="p">[]</span>
+<span class="p">}</span></code></pre></div>
+<p>Next up in the configuration is the Stub. The Stub defines how to respond to incoming requests. A Stub uses Predicates to define rules that requests must match. If all the Predicates in a stub match then the responses are returned. Notice <code>responses</code> is an array. If multiple responses are defined in a Stub it’ll cycle through them for each request.</p>
+
+<p>The following Stub it is looking for a GET request and a path that matches the regular expression. If they don’t match it’ll go to the next Stub defined in the Imposter or the <code>defaultResponse</code> if none match.</p>
+<div class="highlight"><pre class="chroma"><code class="language-JavaScript" data-lang="JavaScript"><span class="p">{</span>
+    <span class="s2">&#34;predicates&#34;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&#34;equals&#34;</span><span class="o">:</span> <span class="p">{</span>
+                <span class="s2">&#34;method&#34;</span><span class="o">:</span> <span class="s2">&#34;GET&#34;</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&#34;matches&#34;</span><span class="o">:</span> <span class="p">{</span>
+                <span class="s2">&#34;path&#34;</span><span class="o">:</span> <span class="s2">&#34;^/users/.*/permissions&#34;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="s2">&#34;responses&#34;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&#34;is&#34;</span><span class="o">:</span> <span class="p">{</span>
+                <span class="s2">&#34;statusCode&#34;</span><span class="o">:</span> <span class="mi">200</span><span class="p">,</span>
+                <span class="s2">&#34;headers&#34;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&#34;Content-Type&#34;</span><span class="o">:</span> <span class="s2">&#34;application/json&#34;</span>
+                <span class="p">},</span>
+                <span class="s2">&#34;body&#34;</span><span class="o">:</span> <span class="s2">&#34;{ \&#34;foo\&#34;: \&#34;bar\&#34; }&#34;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+<p>The above Stub would match <code>GET /users/1234567/permissions</code> and return a response with a 200 status code and a simple JSON object. JSON bodies in Stubs must be stringified. We can improve the Stub by referencing a JSON file and letting Mountebank stringify it for us.</p>
+
+<pre><code>&quot;body&quot;: &quot;&lt;%- stringify(filename, '../fixtures/service-foo/user-permissions-200.json') %&gt;&quot;
+</code></pre>
+
+<p>Now Mountebank will return the JSON defined in the file.</p>
+
+<p>Mountebank has <a href="http://www.mbtest.org/docs/api/predicates" target="_blank">many Predicate types</a>. You can match on nearly any part of a request. For example, in our Hydra Imposter we have a Predicate that looks for a particular key to exist in the request body.</p>
+<div class="highlight"><pre class="chroma"><code class="language-JavaScript" data-lang="JavaScript"><span class="p">{</span>
+    <span class="s2">&#34;jsonpath&#34;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&#34;selector&#34;</span><span class="o">:</span> <span class="s2">&#34;$..field&#34;</span> <span class="p">},</span>
+    <span class="s2">&#34;equals&#34;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&#34;body&#34;</span><span class="o">:</span> <span class="s2">&#34;id&#34;</span> <span class="p">}</span>
+<span class="p">}</span></code></pre></div>
+<p>Through these Predicates you can build up complex queries to match nearly any kind of request.</p>
+
+<h2 id="potential-problems">Potential Problems</h2>
+
+<p>While mocking service dependencies aids in testing there are a number of risks.</p>
+
+<h3 id="out-of-sync-mocks">Out of sync mocks</h3>
+
+<p>As with all mocking there is a risk of becoming out of sync with the actual implementation. Our hope is to mitigate this in a number of ways.</p>
+
+<ol>
+<li>Rely on contract testing where possible to validate our mocks. This would allow us to validate each part of our app in isolation without relying on brittle end to end tests as much. There are tools such <a href="https://pact.io" target="_blank">Pact</a> that can enable this.</li>
+<li>When contract tests are not a viable options run API and UI tests against staging and production (Post Deployment Verification).</li>
+</ol>
+
+<h3 id="complex-imposters">Complex Imposters</h3>
+
+<p>There are many ways to configure Imposters and if not careful they can become extremely complex. Here are a few observations I’ve made as I’ve used Mountebank:</p>
+
+<ol>
+<li>Focus mostly on mocking happy paths and common problem areas. It is possible to mock out every edge case but that could mean the Imposters likely getting bloated and confusing.</li>
+<li>Simplify Predicates as much as possible. Use only those that are absolutely required.</li>
+<li>Break up Imposters, Stubs and responses into separate files. We’ve broken the configuration into a file per Imposter (service) and then each Stub includes the necessary JSON files. It keeps the config organized and easier to follow and add to.</li>
+<li>Decide on common identifiers that can be used to easily simulate a response. For example, an ID of 11111 (<code>GET /users/11111/permissions</code>) could be used to always return a 200 response but an ID of 22222 could always return a 404. An ID of 33333 could result in a 500 error code.</li>
+</ol>
+
+<h2 id="future">Future</h2>
+
+<p>Our next step is to continue to build out more tests that rely data provided by Mountebank. Additionally we are investigating Post Deployment Verification and Contract testing as noted above. As usual the higher you get in the testing pyramid the more difficult and brittle tests get so we’re still figuring what to test and how much to test.</p>
+
+<p>I’m always curious to see how others do testing so please get in touch and we can chat!</p>
+
+<h2 id="additional-documentation">Additional Documentation</h2>
+
+<ul>
+<li><a href="https://martinfowler.com/bliki/IntegrationTest.html" target="_blank">Martin Fowler on Integration Testing</a></li>
+<li><a href="https://martinfowler.com/bliki/ContractTest.html" target="_blank">Martin Fowler on Contract Testing</a></li>
+<li><a href="http://www.mbtest.org/" target="_blank">Mountebank Documentation</a></li>
+<li><a href="https://www.manning.com/books/testing-microservices-with-mountebank" target="_blank">Book: Testing Microservices with Mountebank</a></li>
+</ul>
+
+</div>
+
+
+
+<p class="post-meta">
+  <time class="post-meta" datetime="Tue, Feb 13, 2018">
+    February 13, 2018
+  </time>
+</p>
+
+
+
+
+  </li>
+
+  
+
+  <li class="post-item">
+
+    <h1 class="post-title">
+  <a href="http://www.dustinmartin.net/unbreak-your-code-with-git-bisect/">Unbreak Your Code With Git Bisect</a>
+</h1>
+
+<div class="full-post">
+  <p><code>git bisect</code> is a helpful tool to assist you in finding which commit introduced a bug.</p>
+
+<p>In a world without <code>git bisect</code> when you need to find the commit that introduced a bug you’d likely have to go through commits one by one, manually checking each one out and then doing some testing. <code>git bisect</code> can make that process a bit less painful by automating a binary search of your commits.</p>
+
+<p>To start it just execute <code>git bisect start</code>.</p>
+
+<p>The latest commit likely has the bug so mark it as bad: <code>git bisect bad</code>.</p>
+
+<p>Now give it a good commit <em>before</em> the bug was introduced: <code>git bisect good 7df148d3</code>.</p>
+
+<p><code>git bisect</code> will now cycle through the commits. For each one you’ll need to mark each one as good or bad. Then it’ll move on to the next commit.</p>
+
+<p>Here is an (abbreviated) example below:</p>
+
+<pre><code>» git bisect start
+
+» git bisect bad
+
+» git bisect good 7df148d3
+Bisecting: 35 revisions left to test after this (roughly 5 steps)
+
+» git status
+HEAD detached at 4f5d1140
+You are currently bisecting, started from branch 'master'.
+  (use &quot;git bisect reset&quot; to get back to the original branch)
+
+» git bisect bad
+Bisecting: 17 revisions left to test after this (roughly 4 steps)
+
+» git bisect good
+Bisecting: 5 revisions left to test after this (roughly 2 steps)
+
+» git bisect bad
+f01f1b96feed92b6afd60ebac576571a98bcda56 is the first bad commit
+commit f01f1b96feed92b6afd60ebac576571a98bcda56
+Author: Joe Dev &lt;jdev@companyfoo1000.com&gt;
+Date:   Tue Jan 16 15:40:46 2018 -0600
+
+    Add super awesome feature that won't break anything
+</code></pre>
+
+<p>Each time you mark a commit as good/bad it moves to a new commit. You can see the <code>git status</code> above shows the current commit. After the last <code>git bisect bad</code> it identified the commit that introduced the bug.</p>
+
+<p>With the commit found just clean up with <code>git bisect reset</code> and you are good to go!</p>
+
+<p>There are quite a few other options with <code>git bisect</code> that you can read about in the <a href="https://git-scm.com/docs/git-bisect" target="_blank">git docs</a>.</p>
+
+</div>
+
+
+
+<p class="post-meta">
+  <time class="post-meta" datetime="Sun, Jan 21, 2018">
+    January 21, 2018
+  </time>
+</p>
+
+
+
+
+  </li>
+
+  
+
+  <li class="post-item">
+
+    <h1 class="post-title">
+  <a href="http://www.dustinmartin.net/level-up-your-git-skills-with-aliases/">Level Up Your Git Skills With Aliases!</a>
+</h1>
+
+<div class="full-post">
+  <p>Like many programmers I use git constantly. And also like many programmers I get tired of typing the same commands over and over and over. So I&rsquo;ve added the following aliases to my .zshrc to make common commands easier and quicker to type. You could do something similar via .gitconfig or .bashrc.</p>
+
+<p>Some of my most used aliases are <code>gpb</code> for pushing a branch, <code>gca</code> for committing all changes, <code>gs</code> for getting the status, and <code>gup</code> for rebasing from master.</p>
+
+<p>Let me know if you have any suggestions!</p>
+<div class="highlight"><pre class="chroma"><code class="language-Bash" data-lang="Bash"><span class="c1"># Git
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">g</span><span class="o">=</span><span class="s1">&#39;git&#39;</span>
+
+<span class="c1"># Shorten common commands
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gst</span><span class="o">=</span><span class="s1">&#39;g status&#39;</span>
+<span class="nb">alias</span> <span class="nv">gpl</span><span class="o">=</span><span class="s1">&#39;g pull&#39;</span>
+<span class="nb">alias</span> <span class="nv">gpu</span><span class="o">=</span><span class="s1">&#39;g push&#39;</span>
+<span class="nb">alias</span> <span class="nv">gf</span><span class="o">=</span><span class="s1">&#39;g fetch&#39;</span>
+<span class="nb">alias</span> <span class="nv">gco</span><span class="o">=</span><span class="s1">&#39;g checkout&#39;</span>
+<span class="nb">alias</span> <span class="nv">grb</span><span class="o">=</span><span class="s1">&#39;g rebase&#39;</span>
+<span class="nb">alias</span> <span class="nv">grbc</span><span class="o">=</span><span class="s1">&#39;g rebase --continue&#39;</span>
+<span class="nb">alias</span> <span class="nv">grba</span><span class="o">=</span><span class="s1">&#39;g rebase --abort&#39;</span>
+<span class="nb">alias</span> <span class="nv">ga</span><span class="o">=</span><span class="s1">&#39;g add&#39;</span>
+<span class="nb">alias</span> <span class="nv">gm</span><span class="o">=</span><span class="s1">&#39;g merge&#39;</span>
+
+<span class="c1"># More succinct status
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gs</span><span class="o">=</span><span class="s1">&#39;g status -sb&#39;</span>
+
+<span class="c1"># Show all branches in the order of last change
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gb</span><span class="o">=</span><span class="s1">&#39;g for-each-ref --sort=committerdate refs/heads/ --format=&#34;%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))&#34;&#39;</span>
+
+<span class="c1"># Nicer diff
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gd</span><span class="o">=</span><span class="s1">&#39;g diff --word-diff&#39;</span>
+
+<span class="c1"># Delete a branch
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gdb</span><span class="o">=</span><span class="s1">&#39;g branch -D&#39;</span>
+
+<span class="c1"># Fancy git log
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gl</span><span class="o">=</span><span class="s1">&#39;g log --graph --stat --abbrev-commit --date=relative&#39;</span>
+
+<span class="c1"># Push branch and set the upstream
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gpb</span><span class="o">=</span><span class="s1">&#39;g push --set-upstream origin &#34;$(g rev-parse --abbrev-ref HEAD)&#34;&#39;</span>
+
+<span class="c1"># Safer force push
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gpbf</span><span class="o">=</span><span class="s1">&#39;g push --force-with-lease&#39;</span>
+
+<span class="c1"># Pull the latest from master and rebase
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gup</span><span class="o">=</span><span class="s1">&#39;g pull --rebase origin master&#39;</span>
+
+<span class="c1"># Pull the latest from master and merge
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gum</span><span class="o">=</span><span class="s1">&#39;g pull origin master&#39;</span>
+
+<span class="c1"># Ammend a commit
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gam</span><span class="o">=</span><span class="s1">&#39;g commit --amend&#39;</span>
+
+<span class="c1"># Save changes temporarily
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gwip</span><span class="o">=</span><span class="s1">&#39;g add -A &amp;&amp; g commit --no-verify -m &#34;WIP&#34;&#39;</span>
+
+<span class="c1"># Undo the last commit
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gun</span><span class="o">=</span><span class="s1">&#39;g reset HEAD~1 --mixed&#39;</span>
+
+<span class="c1"># Super undo using the reflog...careful. Undo your undo.
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gungun</span><span class="o">=</span><span class="s1">&#39;g reset &#34;HEAD@{1}&#34;&#39;</span>
+
+<span class="c1"># Delete all merged branches
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gcl</span><span class="o">=</span><span class="s1">&#39;g branch | grep -v &#34;master&#34; | xargs g branch -d&#39;</span>
+
+<span class="c1"># Commit
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gc</span><span class="o">=</span><span class="s1">&#39;g commit -v -m&#39;</span>
+
+<span class="c1"># Add all and commit
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gca</span><span class="o">=</span><span class="s1">&#39;g add -u &amp;&amp; g add . &amp;&amp; g commit -v -m&#39;</span>
+
+<span class="c1"># Create new branch
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gcob</span><span class="o">=</span><span class="s1">&#39;g checkout -b&#39;</span>
+
+<span class="c1"># Add all
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gaa</span><span class="o">=</span><span class="s1">&#39;g add -u &amp;&amp; g add . &amp;&amp; g status&#39;</span>
+
+<span class="c1"># Interactive adding
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gap</span><span class="o">=</span><span class="s1">&#39;g add -p &amp;&amp; g status&#39;</span>
+
+<span class="c1"># Interactive rebase for squashing commits
+</span><span class="c1"></span><span class="nb">alias</span> <span class="nv">gir</span><span class="o">=</span><span class="s2">&#34;g rebase -i origin/master&#34;</span></code></pre></div>
+</div>
+
+
+
+<p class="post-meta">
+  <time class="post-meta" datetime="Sat, Nov 11, 2017">
+    November 11, 2017
+  </time>
+</p>
+
+
+
+
+  </li>
+
+  
+
+  <li class="post-item">
+
+    <h1 class="post-title">
+  <a href="http://www.dustinmartin.net/git-merge---squash/">git merge --squash</a>
+</h1>
+
+<div class="full-post">
+  <p>I&rsquo;m a fan of rebasing in git. I like being able to make lots of small, messy commits without worrying about a readable history and cleaning it up later. But on occasion I&rsquo;ve had issues where rebasing and squashing my commits has resulted in many merge conflicts. I&rsquo;m not really sure why this sometimes happens but it is a pain. Fixing merge conflicts can be error prone and time consuming.</p>
+
+<p>Thankfully I&rsquo;ve recently come across <code>git merge --squash</code> which can help in these situations. To use it do the following:</p>
+<div class="highlight"><pre class="chroma"><code class="language-Bash" data-lang="Bash"><span class="c1"># Checkout master or whatever you branched off
+</span><span class="c1"></span>git checkout master
+
+<span class="c1"># Create a new, clean branch
+</span><span class="c1"></span>git checkout -b fancy-new-clean-branch
+
+<span class="c1"># Now merge the old, messy branch into the new
+</span><span class="c1"># branch with git merge --squash
+</span><span class="c1"></span>git merge --squash old-messy-branch
+
+<span class="c1"># This will copy all the changes to the current
+</span><span class="c1"># branch but will NOT create a new commit. Add all
+</span><span class="c1"># the changes and then commit.
+</span><span class="c1"></span>git add .
+git commit -m <span class="s1">&#39;New easy to understand commit&#39;</span></code></pre></div>
+<p>Now your git history on the new branch will have a new single commit that you can push up and create a pull request for.</p>
+
+</div>
+
+
+
+<p class="post-meta">
+  <time class="post-meta" datetime="Sat, Jul 29, 2017">
+    July 29, 2017
+  </time>
+</p>
+
+
+
+
+  </li>
+
+  
+
+  <li class="post-item">
+
+    <h1 class="post-title">
+  <a href="http://www.dustinmartin.net/mistakes-you-apparently-just-have-to-make-yourself/">Mistakes You Apparently Just Have to Make Yourself</a>
+</h1>
+
+<div class="full-post">
+  <p><a href="https://hackernoon.com/mistakes-you-apparently-just-have-to-make-yourself-cc2dd2bfc25c#.mmt1vrp70" target="_blank">Mistakes You Apparently Just Have to Make Yourself</a>:</p>
+
+<blockquote>
+<p>This code is too bad. We have to rewrite it from scratch.</p>
+
+<p>Functional tests!!</p>
+
+<p>Bureaucracy solves everything</p>
+</blockquote>
+
+<p>I&rsquo;ve probably done all of these at some point but the above were particularly painful. The problem is that most of these sound completely reasonable at first. It&rsquo;s only after you do them that you see the underlying problems.</p>
+
+</div>
+
+
+
+<p class="post-meta">
+  <time class="post-meta" datetime="Wed, Mar 8, 2017">
+    March 8, 2017
+  </time>
+</p>
+
+
+
+
+  </li>
+
+  
+
+</ul>
+
+
+
+<ul class="pagination">
+    
+    <li>
+        <a href="/" aria-label="First"><span aria-hidden="true">&laquo;&laquo;</span></a>
+    </li>
+    
+    <li
+    class="disabled">
+    <a href="" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>
+    </li>
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    <li
+    class="active"><a href="/">1</a></li>
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    <li
+    ><a href="/page/2/">2</a></li>
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    <li
+    ><a href="/page/3/">3</a></li>
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    <li class="disabled"><span aria-hidden="true">&hellip;</span></li>
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    
+    
+    
+    
+    
+        
+        
+    
+    
+    <li
+    ><a href="/page/11/">11</a></li>
+    
+    
+    <li
+    >
+    <a href="/page/2/" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>
+    </li>
+    
+    <li>
+        <a href="/page/11/" aria-label="Last"><span aria-hidden="true">&raquo;&raquo;</span></a>
+    </li>
+    
+</ul>
+
+
+
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script async src='https://d33wubrfki0l68.cloudfront.net/js/e22b2f53de39b540c35079a7b7fcb51ca9727a7c/node_modules/bootstrap/docs/dist/js/bootstrap.min.js'></script>
+</body>
+</html>
+
